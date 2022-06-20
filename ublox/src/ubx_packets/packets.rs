@@ -13,6 +13,8 @@ use ublox_derive::{
     ubx_packet_send,
 };
 
+use serde_derive::{Serialize, Deserialize};
+
 /// Geodetic Position Solution
 #[ubx_packet_recv]
 #[ubx(class = 1, id = 2, fixed_payload_len = 28)]
@@ -319,6 +321,7 @@ struct NavSolution {
 #[ubx(from, rest_reserved)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum GpsFix {
     NoFix = 0,
     DeadReckoningOnly = 1,
@@ -1561,6 +1564,7 @@ bitflags! {
 #[ubx(from_unchecked, into_raw, rest_error)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum CfgNav5DynModel {
     Portable = 0,
     Stationary = 2,
@@ -1587,6 +1591,7 @@ impl Default for CfgNav5DynModel {
 #[ubx(from_unchecked, into_raw, rest_error)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum CfgNav5FixMode {
     Only2D = 1,
     Only3D = 2,
@@ -1604,6 +1609,7 @@ impl Default for CfgNav5FixMode {
 #[ubx(from_unchecked, into_raw, rest_error)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum CfgNav5UtcStandard {
     /// receiver selects based on GNSS configuration (see GNSS timebases)
     Automatic = 0,
