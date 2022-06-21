@@ -2411,6 +2411,38 @@ bitflags! {
     }
 }
 
+/*
+/// Jamming / Interference minotor configuration frame
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x06,
+    id = 0x39,
+    fixed_payload_len = 8,
+    flags = "default_for_builder"
+)]
+struct CfgItfm {
+
+}*/
+
+/// Survey in readable frame
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x04,
+    fixed_payload_len = 28
+)]
+struct TimSvin {
+    duration: u32,
+    mean_x: i32,
+    mean_y: i32,
+    mean_z: i32,
+    mean_v: u32,
+    obs: u32,
+    valid: u8,
+    active: u8,
+    reserved1: [u8; 2],
+}
+
 define_recv_packets!(
     enum PacketRef {
         _ = UbxUnknownPacketRef,
@@ -2445,6 +2477,7 @@ define_recv_packets!(
         InfDebug,
         MonVer,
         MonHw,
-        RxmRtcm
+        RxmRtcm,
+        TimSvin,
     }
 );
