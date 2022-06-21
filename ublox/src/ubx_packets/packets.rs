@@ -667,6 +667,39 @@ struct NavOdo {
 #[ubx(class = 0x01, id = 0x10, fixed_payload_len = 0)]
 struct NavResetOdo {}
 
+/// Differential GNSS configuration frame (32.10.5)
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x06,
+    id = 0x70,
+    fixed_payload_len = 4,
+    flags = "default_for_builder"
+)]
+struct CfgDgnss {
+    /// Specificies differential mode, refer to [CfgDnssModes]
+    #[ubx(map_type = CfgDgnssModes, may_fail)]
+    dgnss_mode: u8,
+    reserved: [u8; 3],
+}
+
+/// Differential GNSS mode
+#[ubx_extend]
+#[ubx(from_unchecked, into_raw, rest_error)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum CfgDgnssModes {
+    /// No attempts are made to fix ambiguities
+    RtkFloat = 2,
+    /// Ambiguities are fixed whenever possible
+    RtkFixed = 3,
+}
+
+impl Default for CfgDgnssModes {
+    fn default() -> CfgDgnssModes {
+        CfgDgnssModes::RtkFloat
+    }
+}
+
 /// Configure odometer
 #[ubx_packet_recv_send]
 #[ubx(
@@ -2250,6 +2283,7 @@ define_recv_packets!(
         NavTimeUTC,
         NavSat,
         NavOdo,
+        CfgDgnss,
         CfgOdo,
         MgaAck,
         AlpSrv,
