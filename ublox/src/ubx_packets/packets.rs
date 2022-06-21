@@ -667,6 +667,68 @@ struct NavOdo {
 #[ubx(class = 0x01, id = 0x10, fixed_payload_len = 0)]
 struct NavResetOdo {}
 
+/// Stops possibly ongoing local OSC calibration
+#[ubx_packet_send]
+#[ubx(
+    class = 0x0D,
+    id = 0x15,
+    fixed_payload_len = 1
+)]
+struct TimVcoCal1 {
+    /// payload is fixed to `0` for this special frame
+    #[ubx(map_type = TimVcoCal1Payload, may_fail)]
+    payload: u8,
+}
+
+#[ubx_extend]
+#[ubx(from_unchecked, into_raw, rest_error)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
+enum TimVcoCal1Payload {
+    StopCal = 0,
+}
+
+impl Default for TimVcoCal1Payload {
+    fn default() -> Self {
+        Self::StopCal
+    }
+}
+
+/// Local OSC calibration management frame
+#[ubx_packet_send]
+#[ubx(
+    class = 0x0D,
+    id = 0x15,
+    fixed_payload_len = 12
+)]
+struct TimVcoCal2 {
+    msg_type: u8,
+    version: u8,
+    osc_id: u8,
+    src_id: u8,
+    reserved1: [u8; 2],
+    raw0: u16,
+    raw1: u16,
+    max_step_size: u16,
+}
+
+/// Local OSC calibration results
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x15,
+    fixed_payload_len = 12
+)]
+struct TimVcoCal3 {
+    msg_type: u8,
+    version: u8,
+    osc_id: u8,
+    reserved1: [u8; 3],
+    gain_uncertainty: u16,
+    gain_vco: i32,
+}
+
 /// Differential GNSS configuration frame (32.10.5)
 #[ubx_packet_recv_send]
 #[ubx(
@@ -2479,5 +2541,6 @@ define_recv_packets!(
         MonHw,
         RxmRtcm,
         TimSvin,
+        TimVcoCal3,
     }
 );
