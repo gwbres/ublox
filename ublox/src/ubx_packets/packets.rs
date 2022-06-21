@@ -1002,14 +1002,19 @@ bitflags! {
 
 /// Time MODE2 Config Frame (32.10.36.1)
 /// only available on `timing` receivers
-#[ubx_packet_send]
-#[ubx(class = 6, id = 0x3D, fixed_payload_len = 28)]
-struct CfgTMode2 {
-    /// Time transfer modes, see [TimeModes] for details
-    #[ubx(map_type = TimeTransferModes)]
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x06, 
+    id = 0x3d, 
+    fixed_payload_len = 28, 
+    flags = "default_for_builder"
+)]
+struct CfgTmode2 {
+    /// Time transfer modes, see [CfgTmode2TimeXferModes] for details
+    #[ubx(map_type = CfgTmode2TimeXferModes, may_fail)]
     time_transfer_mode: u8,
     reserved1: u8,
-    #[ubx(map_type = TimeMode2Flags)] 
+    #[ubx(map_type = CfgTmode2Flags)] 
     flags: u16,
     /// WGS84 ECEF.x coordinate or latitude,
     /// depending on `flags` field 
@@ -1033,13 +1038,12 @@ struct CfgTMode2 {
     survery_in_accur_limit: u32,
 }
 
+/// Time transfer modes (32.10.36)
 #[ubx_extend]
-#[ubx(from, into_raw, rest_reserved)]
+#[ubx(from_unchecked, into_raw, rest_error)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
-#[derive(Serialize, Deserialize)]
-/// Time transfer modes (32.10.36)
-pub enum TimeTransferModes {
+pub enum CfgTmode2TimeXferModes {
     Disabled = 0,
     SurveyIn = 1,
     /// True position information required
@@ -1047,11 +1051,17 @@ pub enum TimeTransferModes {
     FixedMode = 2,
 }
 
+impl Default for CfgTmode2TimeXferModes {
+    fn default() -> Self {
+        Self::Disabled
+    }
+}
+
 #[ubx_extend_bitflags]
-#[ubx(into_raw, rest_reserved)]
+#[ubx(from, into_raw, rest_reserved)]
 bitflags! {
     #[derive(Default)]
-    pub struct TimeMode2Flags :u16 {
+    pub struct CfgTmode2Flags :u16 {
         /// Position given in LAT/LON/ALT
         /// default being WGS84 ECEF
         const LLA = 0x01;
@@ -1062,12 +1072,17 @@ bitflags! {
 
 /// Time MODE3 Config Frame (32.10.37.1)
 /// only available on `timing` receivers
-#[ubx_packet_send]
-#[ubx(class = 6, id = 0x71, fixed_payload_len = 40)] 
-struct CfgTMode3 {
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x06, 
+    id = 0x71, 
+    fixed_payload_len = 40,
+    flags = "default_for_builder"
+)] 
+struct CfgTmode3 {
     version: u8,
     reserved1: u8,
-    #[ubx(map_type = TimeMode3Flags)] 
+    #[ubx(map_type = CfgTmode3Flags)] 
     flags: u16,
     /// WGS84 ECEF.x coordinate or latitude,
     /// depending on `flags` field 
@@ -1109,10 +1124,10 @@ struct CfgTMode3 {
 }
 
 #[ubx_extend_bitflags]
-#[ubx(into_raw, rest_reserved)]
+#[ubx(from, into_raw, rest_reserved)]
 bitflags! {
     #[derive(Default)]
-    pub struct TimeMode3Flags : u16 {
+    pub struct CfgTmode3Flags: u16 {
         const DISABLED = 0x01;
         const SURVEY_IN = 0x02;
         const FIXED_MODE = 0x04;
@@ -1120,10 +1135,15 @@ bitflags! {
 }
 
 /// TP5: "Time Pulse" Config frame (32.10.38.4)
-#[ubx_packet_send]
-#[ubx(class = 6, id = 0x31, fixed_payload_len = 32)]
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x06, 
+    id = 0x31, 
+    fixed_payload_len = 32,
+    flags = "default_for_builder"
+)]
 pub struct CfgTp5 {
-    #[ubx(map_type = TimePulseMode)]
+    #[ubx(map_type = CfgTp5TimePulseMode, may_fail)]
     tp_idx: u8,
     version: u8,
     reserved1: [u8; 2],
@@ -1159,30 +1179,36 @@ pub struct CfgTp5 {
 
 /// TimePulseMode used in CfgTp5 frame
 #[ubx_extend]
-#[ubx(into_raw)]
+#[ubx(from_unchecked, into_raw, rest_error)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
-pub enum TimePulseMode {
+pub enum CfgTp5TimePulseMode {
     TimePulse = 0,
     TimePulse2 = 1,
+}
+
+impl Default for CfgTp5TimePulseMode {
+    fn default() -> Self {
+        Self::TimePulse
+    }
 }
 
 #[ubx_extend_bitflags]
 #[ubx(into_raw, rest_reserved)]
 bitflags! {
     pub struct Tp5Flags: u32 {
-        // Must be set for FTS variant,
-        // enables time pulse
+        // Enables time pulse
         const ACTIVE = 0x01;
         /// Synchronize time pulse to GNSS as
         /// soon as GNSS time is valid.
-        /// Use local lock otherwise
-        /// This bit is ignored by FTS product variants.
-        /// This flag can only be unset in Timing variants.
+        /// Uses local lock otherwise.
         const LOCK_GNSS_FREQ = 0x02;
-        /// TODO
+        /// use `freq_period_lock` and `pulse_len_ratio_lock`
+        /// fields as soon as GPS time is valid. Uses 
+        /// `freq_period` and `pulse_len_ratio` when GPS time is invalid.
         const LOCKED_OTHER_SET = 0x04;
-        /// Interprate frequency values instead of period values 
+        /// `freq_period` and `pulse_len_ratio` fields
+        /// are interprated as frequency when this bit is set
         const IS_FREQ = 0x08;
         /// Interprate pulse lengths instead of duty cycle
         const IS_LENGTH = 0x10;
@@ -2234,6 +2260,9 @@ define_recv_packets!(
         CfgPrtUart,
         CfgNav5,
         CfgAnt,
+        CfgTmode2,
+        CfgTmode3,
+        CfgTp5,
         InfError,
         InfWarning,
         InfNotice,
