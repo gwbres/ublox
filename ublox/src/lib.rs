@@ -16,12 +16,9 @@
 //!    reserved0: 0,
 //!    tx_ready: 0,
 //!    mode: UartMode::new(DataBits::Eight, Parity::None, StopBits::One),
-//!    //mode: 0x8d0,
 //!    baud_rate: 9600,
-//!    //in_proto_mask: 0x07,
 //!    in_proto_mask: ublox::InProtoMask::all(),
-//!    //out_proto_mask: 0x01,
-//!    out_proto_mask: ublox::OutProtoMask::UBLOX, // cfg device for UBX
+//!    out_proto_mask: ublox::OutProtoMask::UBLOX,
 //!    flags: 0,
 //!    reserved5: 0,
 //! }.into_packet_bytes();
