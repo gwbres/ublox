@@ -2486,6 +2486,45 @@ struct CfgItfm {
 
 }*/
 
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x11,
+    fixed_payload_len = 8,
+    flags = "default_for_builder"
+)]
+struct TimDosc {
+    /// Message version: 0x00
+    version: u8,
+    reserved1: [u8; 3],
+    /// Raw value to be applied to the DAC
+    /// controlling the external OSC.
+    /// Write approriate amount of bits as big endian
+    value: u32,
+}
+
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x0D,
+    id = 0x16,
+    fixed_payload_len = 32,
+    flags = "default_for_builder"
+)]
+struct TimFchg {
+    version: u8,
+    reserved: [u8; 3],
+    /// GPS time of week of the navigation epoch, in ms,
+    /// from which the sync manager obtains the GNSS 
+    /// specific data
+    itow: u32,
+    /// Internal OSC frequency increment in ppb
+    #[ubx(map_type = f64, scale = 3.90625E-3)] // 2^-8 
+    int_delta_freq: i32,
+    /// Internal OSC frequency increment uncertainty, in ppb
+    #[ubx(map_type = f64, scale = 3.90625E-3)] // 2^-8
+    int_delta_freq_unc: u32,
+}
+
 /// Survey in readable frame
 #[ubx_packet_recv]
 #[ubx(
@@ -2531,7 +2570,7 @@ define_recv_packets!(
         CfgSmgr,
         CfgTmode2,
         CfgTmode3,
-        CfgTp5,
+        CfgTimeDosc,
         InfError,
         InfWarning,
         InfNotice,
@@ -2541,6 +2580,7 @@ define_recv_packets!(
         MonHw,
         RxmRtcm,
         TimSvin,
+        TimDosc,
         TimVcoCal3,
     }
 );
