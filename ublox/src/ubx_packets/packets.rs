@@ -1482,8 +1482,6 @@ struct CfgPrtUart {
 pub enum UartPortId {
     Uart1 = 1,
     Uart2 = 2,
-    Uart3 = 3,
-    Uart4 = 4,
     Usb = 3,
 }
 
