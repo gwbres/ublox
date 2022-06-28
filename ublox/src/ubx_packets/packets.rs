@@ -1294,6 +1294,7 @@ struct CfgTp5 {
 #[ubx(from_unchecked, into_raw, rest_error)]
 #[repr(u8)]
 #[derive(Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize)]
 pub enum CfgTp5TimePulseMode {
     TimePulse = 0,
     TimePulse2 = 1,
@@ -2523,7 +2524,92 @@ struct TimFchg {
     /// Internal OSC frequency increment uncertainty, in ppb
     #[ubx(map_type = f64, scale = 3.90625E-3)] // 2^-8
     int_delta_freq_unc: u32,
+    /// Current raw DAC command [n/a] 
+    internal_raw: u32,
+    /// External DAC frequency increment 
+    #[ubx(map_type = f64, scale = 3.90625E-3)] // 2^-8
+    ext_delta_freq: i32,
+    /// External DAC frequency increment uncertainty 
+    #[ubx(map_type = f64, scale = 3.90625E-3)] // 2^-8
+    ext_delta_freq_inc: u32,
+    /// Current raw DAC command [n/a]
+    external_raw: u32,
 }
+
+/// Oscilator Identification
+#[ubx_extend]
+#[ubx(from_unchecked, into_raw, rest_error)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
+pub enum OscillatorId {
+    Internal = 0,
+    External = 1,
+}
+
+impl Default for OscillatorId {
+    fn default() -> Self {
+        Self::Internal
+    }
+}
+
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x0D,
+    id = 0x17,
+    fixed_payload_len = 8,
+    flags = "default_for_builder"
+)]
+struct TimHoc {
+    /// Message version: 0x00
+    version: u8,
+    /// Oscillator ID, 
+    #[ubx(map_type = OscillatorId, may_fail)]
+    osc_id: u8,
+    /// flags
+    #[ubx(map_type = TimHocFlags)]
+    flags: u8,
+    reserved1: u8,
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-8 
+    /// Required frequency offset or raw output
+    value: i32,
+}
+
+#[ubx_extend_bitflags]
+#[ubx(from, into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    pub struct TimHocFlags: u8 {
+        const RAW_DIGITAL_OUTPUT = 0x01;
+        const VALUE_RELATIVE_TO_CURRENT = 0x02;
+    }
+}
+
+/*
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x13,
+    max_payload_len = 204, //TODO 12+24*N=8, quel est le N max?
+    flags = "default_for_builder",
+)]
+struct TimSmeas {
+    verison: u8,
+    /// Number of measurements, in 
+    /// case of repeated block
+    num_meas: u8,
+    reserved1: [u8; 2],
+    /// Time of week in [ms]
+    itow: u32,
+    reserved2: [u8; 2],
+
+    #[ubx(map_type = TimSmeasIter,
+        may_fail,
+        is_valid = timsmeas::is_valid,
+        from = timesmeas::convert_to_iter,
+        get_as_ref)]
+    meas: [u8, 0],
+} */
 
 /// Survey in readable frame
 #[ubx_packet_recv]
@@ -2542,6 +2628,140 @@ struct TimSvin {
     valid: u8,
     active: u8,
     reserved1: [u8; 2],
+}
+
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x03,
+    fixed_payload_len = 28,
+)]
+struct TimTm2 {
+    ch: u8,
+    #[ubx(map_type = TimTm2Flags)]
+    flags: u8,
+    count: u16,
+    wnr: u16,
+    wnf: u16,
+    to_msr: u32,
+    tow_sub_msr: u32,
+    tow_msf: u32,
+    two_sub_msf: u32,
+    acc_est: u32,
+}
+
+#[ubx_extend_bitflags]
+#[ubx(from, rest_reserved)]
+bitflags! {
+    pub struct TimTm2Flags: u8 {
+        const RUNNING = 0x01;
+        const STOPPED = 0x02;
+        const NEW_FALLING_EDGE = 0x04;
+        const GNSS_TIME_TIMEBASE = 0x08;
+        const UTC_TIME_BASE = 0x10;
+        const UTC_AVAILABLE = 0x20;
+        const TIME_IS_VALID = 0x40;
+        const NEW_RISING_EDGE = 0x80;
+    }
+}
+
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x12,
+    fixed_payload_len = 56
+)]
+struct TimTos {
+    version: u8,
+    gnss_id: u8,
+    reserved1: [u8; 2],
+    #[ubx(map_type = TimTosFlags)]
+    flags: u32,
+    year: u16,
+    month: u8,
+    day: u8,
+    hour: u8,
+    minute: u8,
+    second: u8,
+    utc_standard: u8,
+    utc_offset: i32,
+    utc_uncertainty: u32,
+    week: u32,
+    tow: u32,
+    gnss_offset: i32,
+    gnss_uncertainty: u32,
+    int_osc_offset: i32,
+    int_osc_uncertainty: u32,
+    ext_osc_offset: i32,
+    ext_osc_uncertainty: u32,
+}
+
+#[ubx_extend_bitflags]
+#[ubx(from, into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    pub struct TimTosFlags: u32 {
+        /// Currently in a leap second
+        const LEAP_NOW = 0x01;
+        /// Leap second in current minute
+        const LEAP_CURRENT_MINUTE = 0x02;
+        /// Positive leap second
+        const POSITIVE_LEAP = 0x04;
+        /// Time pulse is within tolerance limit (Ubx-CfgSmgr)
+        const TIME_IN_LIMIT = 0x08;
+        /// Internal oscillator is within tolerance limit (Ubx-CfgSmgr)
+        const INT_OSC_IN_LIMIT = 0x10;
+        /// Exteranl oscillator is within tolerance limit (Ubx-CfgSmgr)
+        const EXT_OSC_IN_LIMIT = 0x20;
+        /// GNSS Time is valid
+        const GNSS_TIME_IS_VALID = 0x40;
+        /// Disciplining source is GNSS
+        const GNSS_DISCIPLINING = 0x80;
+        /// Disciplining source is EXTINT0
+        const EXTINT0_DISCIPLINING = 0x100;
+        /// Disciplining source is EXTINT1
+        const EXTINT1_DISCIPLINING = 0x200;
+        /// Internal Osc measured by host
+        const INT_MEAS_BY_HOST = 0x400;
+        /// External Osc measured by host
+        const EXT_MEAS_BY_HOST = 0x800;
+        /// (T)RAIM system currently active
+        const RAIM = 0x1000;
+        /// Coherent pulse generation active
+        const COHERENT_PULSE = 0x2000;
+        /// Time pulse is locked
+        const TIME_PULSE_LOCKED = 0x4000;
+    }
+}
+
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x0D,
+    id = 0x01,
+    fixed_payload_len = 16,
+)]
+struct TimTp {
+    two_ms: u32,
+    #[ubx(map_type = f64, scale = 2.3283E-10)] // 2^-32 
+    two_sub_ms: u32,
+    q_err: i32,
+    week: u16,
+    #[ubx(map_type = TimTpFlags)]
+    flags: u8,
+    ref_info: u8,
+}
+
+#[ubx_extend_bitflags]
+#[ubx(from, into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    pub struct TimTpFlags: u8 {
+        const UTC_TIME_BASE = 0x01;
+        const UTC_AVAILABLE = 0x02;
+        const RAIM_NOT_ACTIVE = 0x04;
+        const RAIM_ACTIVE = 0x08;
+        const QUANTIZE_ERROR_INVALID = 0x10;
+    }
 }
 
 define_recv_packets!(
@@ -2570,7 +2790,6 @@ define_recv_packets!(
         CfgSmgr,
         CfgTmode2,
         CfgTmode3,
-        CfgTimeDosc,
         InfError,
         InfWarning,
         InfNotice,
@@ -2579,8 +2798,12 @@ define_recv_packets!(
         MonVer,
         MonHw,
         RxmRtcm,
-        TimSvin,
         TimDosc,
+        TimHoc,
+        TimSvin,
+        TimTm2,
+        TimTos,
+        TimTp,
         TimVcoCal3,
     }
 );
