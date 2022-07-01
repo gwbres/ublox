@@ -570,7 +570,6 @@ struct NavSatSvInfo {
     elev: i8,
     azim: i16,
     pr_res: i16,
-
     #[ubx(map_type = NavSatSvFlags)]
     flags: u32,
 }
@@ -631,7 +630,8 @@ struct NavSat {
         may_fail,
         is_valid = navsat::is_valid,
         from = navsat::convert_to_iter,
-        get_as_ref)]
+        get_as_ref,
+    )]
     svs: [u8; 0],
 }
 
@@ -1064,6 +1064,91 @@ struct CfgRst {
     #[ubx(map_type = ResetMode)]
     reset_mode: u8,
     reserved1: u8,
+}
+
+/// GNSS System Configuration frame
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x06, 
+    id = 0x3E,
+    max_payload_len = 128,
+    flags = "default_for_builder"
+)]
+struct CfgGnss {
+    /// Version: 0 for this version
+    version: u8,
+    /// Number of tracking channels available
+    /// (hardware dependent), read only information
+    num_trk_ch_hw: u8,
+    /// Number of tracking channels to use
+    num_trk_ch_use: u8,
+    /// Number of configuration blocks
+    num_cfg_blocks: u8,
+    /// cfg 
+    #[ubx(map_type = CfgGnssIter, 
+        may_fail,
+        is_valid = cfg_gnss::is_valid,
+        from = cfg_gnss::convert_to_iter,
+        get_as_ref,
+    )]
+    cfg: [u8; 0],
+}
+
+#[ubx_packet_recv]
+#[ubx(
+    class = 0x06, 
+    id = 0x3E, 
+    fixed_payload_len = 8,
+    flags = "default_for_builder",
+)]
+struct CfgGnssItem {
+    gnss_id: u8,
+    res_trk_ch: u8,
+    max_trk_ch: u8,
+    reserved1: u8,
+    flags: u32,
+}
+
+pub struct CfgGnssIter<'a> {
+    data: &'a [u8],
+    offset: usize,
+}
+
+impl<'a> core::iter::Iterator for CfgGnssIter<'a> {
+    type Item = CfgGnssItemRef<'a>;
+    fn next (&mut self) -> Option<Self::Item> {
+        if self.offset < self.data.len() {
+            let data = &self.data[self.offset..self.offset +8];
+            self.offset += 8;
+            Some(CfgGnssItemRef(data))
+        } else {
+            None
+        }
+    }
+}
+
+impl fmt::Debug for CfgGnssIter<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CfgGnssIter").finish()
+    }
+}
+
+mod cfg_gnss {
+    use super::CfgGnssIter;
+    pub(crate) fn is_valid (payload: &[u8]) -> bool {
+        if payload.len() % 8 == 0 {
+            true
+        } else {
+            false
+        }
+    }
+
+    pub(crate) fn convert_to_iter (payload: &[u8]) -> CfgGnssIter {
+        CfgGnssIter {
+            data: payload,
+            offset: 0,
+        }
+    }
 }
 
 /// Reset Receiver / Clear Backup Data Structures
@@ -1649,6 +1734,7 @@ bitflags! {
     /// Through that, multiple protocols can be defined on a single port
     /// Used in `CfgPrtSpi` and `CfgPrtI2c`
     #[derive(Default)]
+    #[derive(Serialize, Deserialize)]
     pub struct InProtoMask: u16 {
         const UBOX = 1;
         const NMEA = 2;
@@ -1667,6 +1753,7 @@ bitflags! {
     /// Through that, multiple protocols can be defined on a single port
     /// Used in `CfgPrtSpi` and `CfgPrtI2c`
     #[derive(Default)]
+    #[derive(Serialize, Deserialize)]
     pub struct OutProtoMask: u16 {
         const UBLOX = 1;
         const NMEA = 2;
@@ -2778,6 +2865,7 @@ define_recv_packets!(
         NavOdo,
         CfgDgnss,
         CfgOdo,
+        CfgTp5,
         MgaAck,
         AlpSrv,
         AckAck,
@@ -2787,6 +2875,7 @@ define_recv_packets!(
         CfgPrtUart,
         CfgNav5,
         CfgAnt,
+        CfgGnss,
         CfgSmgr,
         CfgTmode2,
         CfgTmode3,
