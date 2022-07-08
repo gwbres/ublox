@@ -15,6 +15,20 @@ use ublox_derive::{
 
 use serde_derive::{Serialize, Deserialize};
 
+//use rinex::constellation::{Constellation, Augmentation};
+
+/*
+macro_rules! sbas_supported {
+    ($sbas: expr) => {
+        $sbas in vec![
+            Augmentation::WAAS,
+            Augmentation::EGNOS,
+            Augmentation::MSAS,
+            Augmentation::GAGAN,
+        ]
+    }
+}*/
+
 /// Geodetic Position Solution
 #[ubx_packet_recv]
 #[ubx(class = 1, id = 2, fixed_payload_len = 28)]
@@ -544,11 +558,17 @@ pub enum NavSatQualityIndicator {
     CarrierLock,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub enum NavSatSvHealth {
     Healthy,
     Unhealthy,
     Unknown(u8),
+}
+
+impl Default for NavSatSvHealth {
+    fn default() -> Self {
+        Self::Unknown(0)
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -667,34 +687,23 @@ struct NavOdo {
 #[ubx(class = 0x01, id = 0x10, fixed_payload_len = 0)]
 struct NavResetOdo {}
 
-/// Stops possibly ongoing local OSC calibration
+/// End of Epoch Marker
+#[ubx_packet_recv]
+#[ubx(class = 0x01, id = 0x61, fixed_payload_len = 4)]
+struct NavEoe {
+    /// GPS time of week for navigation epoch
+    itow: u32,
+}
+
+/// Sends "Stop calibration" request
 #[ubx_packet_send]
-#[ubx(
-    class = 0x0D,
-    id = 0x15,
-    fixed_payload_len = 1
-)]
-struct TimVcoCal1 {
-    /// payload is fixed to `0` for this special frame
-    #[ubx(map_type = TimVcoCal1Payload, may_fail)]
-    payload: u8,
-}
+#[ubx(class = 0x01, id = 0x01, fixed_payload_len = 0)]
+struct TimVcoStopCal {}
+//    /// 0x00 for this message
+//    msg_type: u8,
+//}
 
-#[ubx_extend]
-#[ubx(from_unchecked, into_raw, rest_error)]
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, PartialEq)]
-#[derive(Serialize, Deserialize)]
-enum TimVcoCal1Payload {
-    StopCal = 0,
-}
-
-impl Default for TimVcoCal1Payload {
-    fn default() -> Self {
-        Self::StopCal
-    }
-}
-
+/*
 /// Local OSC calibration management frame
 #[ubx_packet_send]
 #[ubx(
@@ -727,7 +736,7 @@ struct TimVcoCal3 {
     reserved1: [u8; 3],
     gain_uncertainty: u16,
     gain_vco: i32,
-}
+}*/
 
 /// Differential GNSS configuration frame (32.10.5)
 #[ubx_packet_recv_send]
@@ -1067,12 +1076,11 @@ struct CfgRst {
 }
 
 /// GNSS System Configuration frame
-#[ubx_packet_recv]
+#[ubx_packet_send]
 #[ubx(
     class = 0x06, 
     id = 0x3E,
-    max_payload_len = 128,
-    flags = "default_for_builder"
+    fixed_payload_len = 4,
 )]
 struct CfgGnss {
     /// Version: 0 for this version
@@ -1084,29 +1092,26 @@ struct CfgGnss {
     num_trk_ch_use: u8,
     /// Number of configuration blocks
     num_cfg_blocks: u8,
+/*
     /// cfg 
     #[ubx(map_type = CfgGnssIter, 
         may_fail,
-        is_valid = cfg_gnss::is_valid,
-        from = cfg_gnss::convert_to_iter,
+        is_valid = cfggnss::is_valid,
+        from = cfggnss::convert_to_iter,
         get_as_ref,
-    )]
-    cfg: [u8; 0],
+    )]*/
+//    cfg: [u8; 0],
 }
 
-#[ubx_packet_recv]
-#[ubx(
-    class = 0x06, 
-    id = 0x3E, 
-    fixed_payload_len = 8,
-    flags = "default_for_builder",
-)]
+/*
+#[ubx_packet_recv_send]
+#[ubx(class = 0x06, id = 0x3E, fixed_payload_len = 4)]
+#[derive(Default)]
 struct CfgGnssItem {
     gnss_id: u8,
     res_trk_ch: u8,
     max_trk_ch: u8,
     reserved1: u8,
-    flags: u32,
 }
 
 pub struct CfgGnssIter<'a> {
@@ -1116,6 +1121,7 @@ pub struct CfgGnssIter<'a> {
 
 impl<'a> core::iter::Iterator for CfgGnssIter<'a> {
     type Item = CfgGnssItemRef<'a>;
+    
     fn next (&mut self) -> Option<Self::Item> {
         if self.offset < self.data.len() {
             let data = &self.data[self.offset..self.offset +8];
@@ -1133,23 +1139,21 @@ impl fmt::Debug for CfgGnssIter<'_> {
     }
 }
 
-mod cfg_gnss {
+mod cfggnss {
     use super::CfgGnssIter;
-    pub(crate) fn is_valid (payload: &[u8]) -> bool {
-        if payload.len() % 8 == 0 {
-            true
-        } else {
-            false
-        }
+    
+    pub(crate) fn is_valid (bytes: &[u8]) -> bool {
+        bytes.len() % 8 == 0
     }
 
-    pub(crate) fn convert_to_iter (payload: &[u8]) -> CfgGnssIter {
+    pub(crate) fn convert_to_iter (bytes: &[u8]) -> CfgGnssIter {
         CfgGnssIter {
-            data: payload,
+            data: bytes,
             offset: 0,
         }
     }
 }
+*/
 
 /// Reset Receiver / Clear Backup Data Structures
 #[ubx_packet_recv_send]
@@ -2863,7 +2867,9 @@ define_recv_packets!(
         NavTimeUTC,
         NavSat,
         NavOdo,
-        CfgDgnss,
+        NavEoe,
+        //NavOrb,
+        //CfgDgnss,
         CfgOdo,
         CfgTp5,
         MgaAck,
@@ -2875,7 +2881,7 @@ define_recv_packets!(
         CfgPrtUart,
         CfgNav5,
         CfgAnt,
-        CfgGnss,
+        //CfgGnss,
         CfgSmgr,
         CfgTmode2,
         CfgTmode3,
@@ -2887,12 +2893,8 @@ define_recv_packets!(
         MonVer,
         MonHw,
         RxmRtcm,
-        TimDosc,
-        TimHoc,
-        TimSvin,
-        TimTm2,
-        TimTos,
-        TimTp,
-        TimVcoCal3,
+        //TimVcoStopCal,
+        //TimVcoCal1,
+        //TimVcoCal3,
     }
 );
