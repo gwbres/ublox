@@ -2325,6 +2325,41 @@ struct MonHw {
     pull_l: u32,
 }
 
+/// GNSS status,
+/// gives current selected constellations
+#[ubx_packet_recv]
+#[ubx(class = 0x0a, id = 0x28, fixed_payload_len = 7)]
+struct MonGnss {
+    version: u8,
+    /// List of supported Major constellations
+    #[ubx(map_type = MonGnssConstellMask)]
+    supported: u8,
+    /// List of currently enabled Major constellations
+    #[ubx(map_type = MonGnssConstellMask)]
+    enabled: u8,
+    /// Maximum number of concurent Major GNSS
+    /// that can be supported by this receiver
+    simultaneous: u8,
+    reserved1: [u8; 3],
+}
+
+#[ubx_extend_bitflags]
+#[ubx(from, into_raw, rest_reserved)]
+bitflags! {
+    /// Synchronization Manager config flags
+    #[derive(Default)]
+    pub struct MonGnssConstellMask: u8 {
+        /// GPS constellation
+        const GPS = 0x01;
+        /// GLO constellation
+        const GLO = 0x02;
+        /// BDC constellation
+        const BDC = 0x04;
+        /// GAL constellation
+        const GAL = 0x08;
+    }
+}
+
 #[ubx_extend]
 #[ubx(from, rest_reserved)]
 #[repr(u8)]
@@ -2892,6 +2927,7 @@ define_recv_packets!(
         InfDebug,
         MonVer,
         MonHw,
+        MonGnss,
         RxmRtcm,
         //TimVcoStopCal,
         //TimVcoCal1,
