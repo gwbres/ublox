@@ -2893,6 +2893,154 @@ bitflags! {
     }
 }
 
+#[ubx_packet_recv]
+#[ubx(class = 0x13, id = 0x03, fixed_payload_len = 88)]
+struct MgaBdsEph {
+    msg_type: u8,
+    version: u8,
+    sv_id: u8,
+    reserved1: u8,
+    sat_h1: u8,
+    iodc: u8,
+    a2: i16,
+    a1: i32,
+    a0: i32,
+    toc: u32,
+    tgd1: i16,
+    urai: u8,
+    iode: u8,
+    toe: u32,
+    sqrt_a: u32,
+    e: u32,
+    omega: i32,
+    delta_n: i16,
+    idot: i16,
+    m0: i32,
+    omega0: i32,
+    omega_dot: i32,
+    i0: i32,
+    cuc: i32,
+    cus: i32,
+    crc: i32,
+    crs: i32,
+    cic: i32,
+    cis: i32,
+    reserved2: [u8; 4],
+}
+
+#[ubx_packet_recv]
+#[ubx(class = 0x13, id = 0x02, fixed_payload_len = 74)]
+struct MgaGalEph {
+    /// Message type: 
+    /// 0x01 for this type
+    msg_type: u8,
+    /// MEssage version: 
+    /// 0x00 for this version
+    version: u8,
+    /// Satellite #
+    sv_id: u8,
+    reserved1: u8,
+    /// Ephemerics clock correction 
+    /// Issue of Data
+    iod_nav: u16,
+    /// Mean motion difference from computed value
+    /// in semi circles /sec
+    //#[ubx(map_type = f32, scale = 1.136868E-13)] //2^-43
+    delta_n: i16,
+    m0: i32,
+    e: u32,
+    sqrt_a: u32,
+    omega_0: i32,
+    i0: i32,
+    omega: i32,
+    omega_dot: i32,
+    i_dot: i16,
+    cuc: i16,
+    cus: i16,
+    crc: i16,
+    cic: i16,
+    cis: i16,
+    toe: u16,
+    af0: i32,
+    af1: i32,
+    af2: i8,
+    sisa_index_e1e5b: u8,
+    /// Clock correction data
+    toc: u16,
+    /// Broadcast group delay
+    bgd_e1_e5b: i16,
+    reserved2: [u8;2],
+    health_e1b: u8,
+    data_validity_e1b: u8,
+    health_e5b: u8,
+    data_validity_e5b: u8,
+    reserved3: [u8;4],
+}
+
+#[ubx_packet_recv]
+#[ubx(class = 0x13, id = 0x06, fixed_payload_len = 48)]
+struct MgaGloEph {
+    msg_type: u8,
+    version: u8,
+    sv_id: u8,
+    reserved1: u8,
+    ft: u8,
+    b: u8,
+    m: u8,
+    h: i8,
+    x: i32,
+    y: i32,
+    z: i32,
+    dx: i32,
+    dy: i32,
+    dz: i32,
+    ddx: i8,
+    ddy: i8,
+    ddz: i8,
+    tb: u8,
+    gamma: u16,
+    e: u8,
+    delta_tau: u8,
+    tau: i32,
+    reserved2: [u8;4],
+}
+
+#[ubx_packet_recv]
+#[ubx(class = 0x13, id = 0x00, fixed_payload_len = 68)]
+struct MgaGpsEph {
+    msg_type: u8,
+    version: u8,
+    sv_id: u8,
+    reserved1: u8,
+    fit_interval: u8,
+    ura_index: u8,
+    sv_health: u8,
+    tgd: i8,
+    iodc: u16,
+    toc: u16,
+    reserved2: u8,
+    af2: i8,
+    af1: i16,
+    af0: i32,
+    crs: i16,
+    delta_n: i16,
+    m0: i32,
+    cuc: i16,
+    cus: i16,
+    e: u32,
+    sqrt_a: u32,
+    toe: u16,
+    cic: i16,
+    omega0: i32,
+    cis: i16,
+    crc: i16,
+    i0: i32,
+    omega: i32,
+    omega_dot: i32,
+    idot: i16,
+    reserved3: [u8;2],
+}
+
 define_recv_packets!(
     enum PacketRef {
         _ = UbxUnknownPacketRef,
@@ -2928,6 +3076,10 @@ define_recv_packets!(
         InfNotice,
         InfTest,
         InfDebug,
+        MgaBdsEph,
+        MgaGalEph,
+        MgaGloEph,
+        MgaGpsEph,
         MonVer,
         MonHw,
         MonGnss,
