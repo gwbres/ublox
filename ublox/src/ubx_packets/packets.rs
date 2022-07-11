@@ -2929,6 +2929,23 @@ struct MgaBdsEph {
 }
 
 #[ubx_packet_recv]
+#[ubx(class = 0x13, id = 0x03, fixed_payload_len = 16)]
+struct MgaBdsIono {
+    msg_type: u8,
+    version: u8,
+    reserved1: [u8;2],
+    alpha0: i8,
+    alpha1: i8,
+    alpha2: i8,
+    alpha3: i8,
+    beta0: i8,
+    beta1: i8,
+    beta2: i8,
+    beta3: i8,
+    reserved2: [u8;4],
+}
+
+#[ubx_packet_recv]
 #[ubx(class = 0x13, id = 0x02, fixed_payload_len = 74)]
 struct MgaGalEph {
     /// Message type: 
@@ -3041,6 +3058,23 @@ struct MgaGpsEph {
     reserved3: [u8;2],
 }
 
+#[ubx_packet_recv]
+#[ubx(class = 0x13, id = 0x00, fixed_payload_len = 16)]
+struct MgaGpsIono {
+    msg_type: u8,
+    version: u8,
+    reserved1: [u8;2],
+    alpha0: i8,
+    alpha1: i8,
+    alpha2: i8,
+    alpha3: i8,
+    beta0: i8,
+    beta1: i8,
+    beta2: i8,
+    beta3: i8,
+    reserved2: [u8;4],
+}
+
 define_recv_packets!(
     enum PacketRef {
         _ = UbxUnknownPacketRef,
@@ -3077,9 +3111,11 @@ define_recv_packets!(
         InfTest,
         InfDebug,
         MgaBdsEph,
+        MgaBdsIono,
         MgaGalEph,
         MgaGloEph,
         MgaGpsEph,
+        MgaGpsIono,
         MonVer,
         MonHw,
         MonGnss,
