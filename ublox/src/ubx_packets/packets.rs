@@ -2896,34 +2896,83 @@ bitflags! {
 #[ubx_packet_recv]
 #[ubx(class = 0x13, id = 0x03, fixed_payload_len = 88)]
 struct MgaBdsEph {
+    /// Message type: 0x01 for this type
     msg_type: u8,
+    /// Message version: 0x00 for this version
     version: u8,
+    /// BeiDou satellite identifier
     sv_id: u8,
     reserved1: u8,
+    /// Autonomous satellite Health flag
     sat_h1: u8,
+    /// Issue of Data, clock
     iodc: u8,
+    /// Time polynomial coefficient 2 [s/s^2]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-66
     a2: i16,
+    /// Time polynomial coefficient 1
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-50
     a1: i32,
+    /// Time polynomial coefficient 0
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-33
     a0: i32,
+    /// Clock data reference time
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-3
     toc: u32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     tgd1: i16,
+    /// TODO 
     urai: u8,
+    /// TODO 
     iode: u8,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     toe: u32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     sqrt_a: u32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     e: u32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     omega: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     delta_n: i16,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     idot: i16,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     m0: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     omega0: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     omega_dot: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     i0: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     cuc: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     cus: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     crc: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     crs: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     cic: i32,
+    /// TODO 
+    #[ubx(map_type = f64, scale = 1.0)] // 2^
     cis: i32,
     reserved2: [u8; 4],
 }
@@ -2931,16 +2980,34 @@ struct MgaBdsEph {
 #[ubx_packet_recv]
 #[ubx(class = 0x13, id = 0x03, fixed_payload_len = 16)]
 struct MgaBdsIono {
+    /// Message type: 0x06 for this type
     msg_type: u8,
+    /// Message version: 0x00 for this type
     version: u8,
     reserved1: [u8;2],
+    /// Ionospheric parameter alpha0 [s]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-30
     alpha0: i8,
+    /// Ionospheric parameter alpha1 [s/pi]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-27
     alpha1: i8,
+    /// Ionospheric parameter alpha1 [s/pi^2]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-24
     alpha2: i8,
+    /// Ionospheric parameter alpha1 [s/pi^3]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-24
     alpha3: i8,
+    /// Ionospheric parameter beta0 [s]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-11
     beta0: i8,
+    /// Ionospheric parameter beta1 [s/pi]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-14
     beta1: i8,
+    /// Ionospheric parameter beta1 [s/pi^2]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-16
     beta2: i8,
+    /// Ionospheric parameter beta1 [s/pi^3]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-16
     beta3: i8,
     reserved2: [u8;4],
 }
@@ -2962,24 +3029,41 @@ struct MgaGalEph {
     iod_nav: u16,
     /// Mean motion difference from computed value
     /// in semi circles /sec
-    //#[ubx(map_type = f32, scale = 1.136868E-13)] //2^-43
+    #[ubx(map_type = f32, scale = 1.136868E-13)] //2^-43
     delta_n: i16,
+    /// Mean anomaly at reference time [semi-circles]
     m0: i32,
+    /// Eccentricity
     e: u32,
+    /// Square root of semi major axis [sqrt[m]]
     sqrt_a: u32,
+    /// Longitude of ascending node of orbital plane [semi-circles]
+    /// at weekly epoch
     omega_0: i32,
+    /// Inclination angle at reference time [semi-circles]
     i0: i32,
+    /// Argument of perigee [semi-circles]
     omega: i32,
+    /// Rate of change of right ascension [semi-circles/s]
     omega_dot: i32,
+    /// Rate of change of inclination angle [semi-circles/s]
     i_dot: i16,
+    /// Amplitude of cosine harmonic correction term
+    /// to the argument of latitude [rad]
     cuc: i16,
+    /// Amplitude of sine harmonic correction term
+    /// to the argument of latitude [rad]
     cus: i16,
     crc: i16,
     cic: i16,
     cis: i16,
+    /// Ephemeric reference time
     toe: u16,
+    /// SV clock bias correction coefficient
     af0: i32,
+    /// SV clock drift correction coefficient
     af1: i32,
+    /// SV clock drift rate correction coefficient
     af2: i8,
     sisa_index_e1e5b: u8,
     /// Clock correction data
@@ -3061,16 +3145,34 @@ struct MgaGpsEph {
 #[ubx_packet_recv]
 #[ubx(class = 0x13, id = 0x00, fixed_payload_len = 16)]
 struct MgaGpsIono {
+    /// Message type: 0x06 for this type
     msg_type: u8,
+    /// Message version: 0x00 for this version
     version: u8,
     reserved1: [u8;2],
+    /// Ionospheric parameter alpha0 [s]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-30
     alpha0: i8,
+    /// Ionospheric parameter alpha1 [s/semi-circle]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-27
     alpha1: i8,
+    /// Ionospheric parameter alpha1 [s/semi-circle^2]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-24
     alpha2: i8,
+    /// Ionospheric parameter alpha1 [s/semi-circle^3]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-24
     alpha3: i8,
+    /// Ionospheric parameter beta0 [s]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-11
     beta0: i8,
+    /// Ionospheric parameter beta0 [s/semi-circle]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-14
     beta1: i8,
+    /// Ionospheric parameter beta0 [s/semi-circle^2]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-16
     beta2: i8,
+    /// Ionospheric parameter beta0 [s/semi-circle^3]
+    #[ubx(map_type = f64, scale = 1.0)] // 2^-16
     beta3: i8,
     reserved2: [u8;4],
 }
@@ -3093,6 +3195,12 @@ define_recv_packets!(
         CfgOdo,
         CfgTp5,
         MgaAck,
+        MgaBdsEph,
+        MgaBdsIono,
+        MgaGalEph,
+        MgaGloEph,
+        MgaGpsEph,
+        MgaGpsIono,
         AlpSrv,
         AckAck,
         AckNak,
@@ -3110,12 +3218,6 @@ define_recv_packets!(
         InfNotice,
         InfTest,
         InfDebug,
-        MgaBdsEph,
-        MgaBdsIono,
-        MgaGalEph,
-        MgaGloEph,
-        MgaGpsEph,
-        MgaGpsIono,
         MonVer,
         MonHw,
         MonGnss,
