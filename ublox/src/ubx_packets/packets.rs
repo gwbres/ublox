@@ -61,6 +61,35 @@ struct NavPosLlh {
     v_acc: u32,
 }
 
+/// NAV Survey 
+#[ubx_packet_recv]
+#[ubx(class = 1, id = 0x3B, fixed_payload_len = 40)]
+struct NavSvin {
+    version: u8,
+    reserved1: [u8; 3],
+    itow: u32,
+    duration: u32,
+    #[ubx(map_type = f64, scale = 1e-2)]
+    mean_x: i32,
+    #[ubx(map_type = f64, scale = 1e-2)]
+    mean_y: i32,
+    #[ubx(map_type = f64, scale = 1e-2)]
+    mean_z: i32,
+    #[ubx(map_type = f64, scale = 0.1e-3)]
+    mean_x_hp: i8,
+    #[ubx(map_type = f64, scale = 0.1e-3)]
+    mean_y_hp: i8,
+    #[ubx(map_type = f64, scale = 0.1e-3)]
+    mean_z_hp: i8,
+    reserved2: u8,
+    #[ubx(map_type = f64, scale = 0.1e-3)]
+    mean_acc: u32,
+    obs: u32,
+    valid: u8,
+    active: u8,
+    reserved3: [u8; 2],
+}
+
 /// Velocity Solution in NED
 #[ubx_packet_recv]
 #[ubx(class = 1, id = 0x12, fixed_payload_len = 36)]
@@ -3177,6 +3206,60 @@ struct MgaGpsIono {
     reserved2: [u8;4],
 }
 
+/*#[ubx_packet_recv]
+#[ubx(class = 0x02, id = 0x14, max_payload_len = 2840)]
+struct RxmMeasx {
+    version: u8,
+    reserved1: [u8;3],
+    /// GPS measurement ref. time in [s]
+    #[ubx(map_type = f64, scale = 1e-3)]
+    gps_tow: u32,
+    /// GLO measurement ref. time in [s]
+    #[ubx(map_type = f64, scale = 1e-3)]
+    glo_tow: u32,
+    /// BDS measurement ref. time in [s]
+    #[ubx(map_type = f64, scale = 1e-3)]
+    bds_tow: u32,
+    reserved2: [u8; 4],
+    /// QZSS measurement ref. time in [s]
+    #[ubx(map_type = f64, scale = 1e-3)]
+    qzss_tow: u32,
+    /// GPS measurement ref. time accuracy [ms]
+    #[ubx(map_type = f32, scale = 6.250)] //2^-4
+    gps_tow_acc: u16,
+    /// GLO measurement ref. time accuracy [ms]
+    #[ubx(map_type = f32, scale = 6.250)] //2^-4
+    glo_tow_acc: u16,
+    /// BDS measurement ref. time accuracy [ms]
+    #[ubx(map_type = f32, scale = 6.250)] //2^-4
+    bds_tow_acc: u16,
+    reserved3: [u8;2],
+    /// QZSS measurement ref. time accuracy [ms]
+    #[ubx(map_type = f32, scale = 6.250)] //2^-4
+    qzss_tow_acc: u16,
+    /// Number of sat in repeated block
+    num_sv: u8,
+    /// flags
+    flags: u8, 
+    reserved4: [u8;8],
+    gnss_id: u8,
+    sv_id: u8,
+    cno: u8,
+    mpath_indic: u8,
+    /// Doppler measurement [m/s]
+    #[ubx(map_type = f32, scale = 0.04)]
+    doppler_ms: i32,
+    /// Doppler measurement [Hz]
+    #[ubx(map_type = f32, scale = 0.2)]
+    doppler_hz: i32,
+    whole_chips: u16,
+    frac_chips: u16,
+    phase: u32,
+    intg_cphase: u8,
+    pr_rms_err: u8,
+    reserved5: [u8;2],
+}*/
+
 define_recv_packets!(
     enum PacketRef {
         _ = UbxUnknownPacketRef,
@@ -3190,6 +3273,7 @@ define_recv_packets!(
         NavSat,
         NavOdo,
         NavEoe,
+        NavSvin,
         //NavOrb,
         //CfgDgnss,
         CfgOdo,
@@ -3221,9 +3305,11 @@ define_recv_packets!(
         MonVer,
         MonHw,
         MonGnss,
+        //RxmMeasx,
         RxmRtcm,
         //TimVcoStopCal,
         //TimVcoCal1,
         //TimVcoCal3,
+        TimSvin,
     }
 );
