@@ -1313,24 +1313,24 @@ struct CfgTmode2 {
     flags: u16,
     /// WGS84 ECEF.x coordinate in [m] or latitude in [deg° *1E-5],
     /// depending on `flags` field 
-    #[ubx(map_type = f64, scale = 1e-2)]
+    #[ubx(map_type = f64, scale = 1e2)]
     ecef_x_or_lat: i32,
     /// WGS84 ECEF.y coordinate in [m] or longitude in [deg° *1E-5],
     /// depending on `flags` field 
-    #[ubx(map_type = f64, scale = 1e-2)]
+    #[ubx(map_type = f64, scale = 1e2)]
     ecef_y_or_lon: i32,
     /// WGS84 ECEF.z coordinate or altitude, both in [m],
     /// depending on `flags` field 
-    #[ubx(map_type = f64, scale = 1e-2)]
+    #[ubx(map_type = f64, scale = 1e2)]
     ecef_z_or_alt: i32,
     /// Fixed position 3D accuracy in [m]
-    #[ubx(map_type = f64, scale = 1e-3)]
+    #[ubx(map_type = f64, scale = 1e3)]
     fixed_pos_acc: u32,
     /// Survey in minimum duration in [s]
     survey_in_min_duration: u32,
     /// Survey in position accuracy limit in [m]
-    #[ubx(map_type = f64, scale = 1e-3)]
-    survery_in_accur_limit: u32,
+    #[ubx(map_type = f64, scale = 1e3)]
+    survey_in_accur_limit: u32,
 }
 
 /// Time transfer modes (32.10.36)
@@ -2954,13 +2954,25 @@ struct TimSmeas {
     fixed_payload_len = 28
 )]
 struct TimSvin {
+    /// elapsed duration [s]
     duration: u32,
+    /// current X / ECEF (m)
+    #[ubx(map_type = f64, scale = 1e-2)]
     mean_x: i32,
+    /// current Y / ECEF (m)
+    #[ubx(map_type = f64, scale = 1e-2)]
     mean_y: i32,
+    /// current Z / ECEF (m)
+    #[ubx(map_type = f64, scale = 1e-2)]
     mean_z: i32,
+    /// Current surveyin stddev in m^2
+    #[ubx(map_type = f64, scale = 1E-9)]
     mean_v: u32,
+    /// Obs counter
     obs: u32,
+    /// valid bit
     valid: u8,
+    /// active bit
     active: u8,
     reserved1: [u8; 2],
 }
