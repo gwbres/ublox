@@ -374,10 +374,17 @@ pub enum GpsFix {
     TimeOnlyFix = 5,
 }
 
+impl Default for GpsFix {
+    fn default() -> Self {
+        Self::NoFix
+    }
+}
+
 #[ubx_extend_bitflags]
 #[ubx(from, rest_reserved)]
 bitflags! {
     /// Navigation Status Flags
+    #[derive(Default)]
     pub struct NavStatusFlags: u8 {
         /// position and velocity valid and within DOP and ACC Masks
         const GPS_FIX_OK = 1;
@@ -767,6 +774,7 @@ struct TimVcoCal3 {
     gain_vco: i32,
 }*/
 
+/*
 /// Differential GNSS configuration frame (32.10.5)
 #[ubx_packet_recv_send]
 #[ubx(
@@ -798,7 +806,7 @@ impl Default for CfgDgnssModes {
     fn default() -> CfgDgnssModes {
         CfgDgnssModes::RtkFloat
     }
-}
+}*/
 
 /// Configure odometer
 #[ubx_packet_recv_send]
@@ -1092,24 +1100,34 @@ impl<'a> AckNakRef<'a> {
 
 /// Reset Receiver / Clear Backup Data Structures
 #[ubx_packet_send]
-#[ubx(class = 6, id = 4, fixed_payload_len = 4)]
+#[ubx(
+    class = 6, 
+    id = 4, 
+    fixed_payload_len = 4
+)]
 struct CfgRst {
     /// Battery backed RAM sections to clear
     #[ubx(map_type = NavBbrMask)]
     nav_bbr_mask: u16,
-
     /// Reset Type
     #[ubx(map_type = ResetMode)]
     reset_mode: u8,
     reserved1: u8,
 }
 
+impl ResetMode {
+    const fn into_raw(self) -> u8 {
+        self as u8
+    }
+}
+
 /// GNSS System Configuration frame
-#[ubx_packet_send]
+#[ubx_packet_recv_send]
+//#[ubx_packet_send]
 #[ubx(
     class = 0x06, 
     id = 0x3E,
-    fixed_payload_len = 4,
+    fixed_payload_len = 60,
 )]
 struct CfgGnss {
     /// Version: 0 for this version
@@ -1120,22 +1138,82 @@ struct CfgGnss {
     /// Number of tracking channels to use
     num_trk_ch_use: u8,
     /// Number of configuration blocks
-    num_cfg_blocks: u8,
-/*
-    /// cfg 
-    #[ubx(map_type = CfgGnssIter, 
-        may_fail,
-        is_valid = cfggnss::is_valid,
-        from = cfggnss::convert_to_iter,
-        get_as_ref,
-    )]*/
-//    cfg: [u8; 0],
+    num_cfg: u8,
+    /// GPS_ID = 0
+    gps_id: u8,
+    gps_res_trk_ch: u8,
+    gps_max_trk_ch: u8,
+    gps_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    gps_flags: u32, 
+    /// SBAS_ID = 1
+    sbas_id: u8,
+    sbas_res_trk_ch: u8,
+    sbas_max_trk_ch: u8,
+    sbas_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    sbas_flags: u32, 
+    /// GAL_ID = 2
+    gal_id: u8,
+    gal_res_trk_ch: u8,
+    gal_max_trk_ch: u8,
+    gal_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    gal_flags: u32, 
+    /// BDS_ID = 3
+    bds_id: u8,
+    bds_res_trk_ch: u8,
+    bds_max_trk_ch: u8,
+    bds_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    bds_flags: u32, 
+    /// IMES_ID = 4
+    imes_id: u8,
+    imes_res_trk_ch: u8,
+    imes_max_trk_ch: u8,
+    imes_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    imes_flags: u32, 
+    /// QZSS_ID = 5
+    qzss_id: u8,
+    qzss_res_trk_ch: u8,
+    qzss_max_trk_ch: u8,
+    qzss_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    qzss_flags: u32, 
+    /// GLO_ID = 6
+    glo_id: u8,
+    glo_res_trk_ch: u8,
+    glo_max_trk_ch: u8,
+    glo_reserved1: u8,
+    #[ubx(map_type = CfgGnssFlags)]
+    glo_flags: u32, 
 }
 
-/*
+#[ubx_extend_bitflags]
+#[ubx(from, into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    #[derive(Serialize, Deserialize)]
+    pub struct CfgGnssFlags: u32 {
+        /// Enable this system
+        const ENABLE = 0x01;
+        /// systems
+        const L1  = 0x010000;
+        const L1S = 0x040000;
+        const L2 =  0x100000;
+        const L5 =  0x200000;
+        const B2A = 0x800000;
+    }
+}
+
 #[ubx_packet_recv_send]
-#[ubx(class = 0x06, id = 0x3E, fixed_payload_len = 4)]
-#[derive(Default)]
+#[ubx(
+    class = 0x06, 
+    id = 0x3E, 
+    fixed_payload_len = 4,
+    flags = "default_for_builder",
+)]
 struct CfgGnssItem {
     gnss_id: u8,
     res_trk_ch: u8,
@@ -1172,7 +1250,7 @@ mod cfggnss {
     use super::CfgGnssIter;
     
     pub(crate) fn is_valid (bytes: &[u8]) -> bool {
-        bytes.len() % 8 == 0
+        bytes.len() % 8  == 0
     }
 
     pub(crate) fn convert_to_iter (bytes: &[u8]) -> CfgGnssIter {
@@ -1182,11 +1260,15 @@ mod cfggnss {
         }
     }
 }
-*/
 
 /// Reset Receiver / Clear Backup Data Structures
 #[ubx_packet_recv_send]
-#[ubx(class = 6, id = 0x13, fixed_payload_len = 4)]
+#[ubx(
+    class = 6, 
+    id = 0x13, 
+    fixed_payload_len = 4,
+    flags = "default_for_builder",
+)]
 struct CfgAnt {
     /// Antenna flag mask. See [AntFlags] for details.
     #[ubx(map_type = AntFlags)]
@@ -1525,12 +1607,6 @@ pub enum ResetMode {
     HardwareResetAfterShutdown = 0x04,
     ControlledGpsStop = 0x08,
     ControlledGpsStart = 0x09,
-}
-
-impl ResetMode {
-    const fn into_raw(self) -> u8 {
-        self as u8
-    }
 }
 
 /// Port Configuration for I2C
@@ -2380,6 +2456,7 @@ struct MonGnss {
 #[ubx(from, into_raw, rest_reserved)]
 bitflags! {
     #[derive(Default)]
+    #[derive(Serialize, Deserialize)]
     pub struct MonGnssConstellMask: u8 {
         /// GPS constellation
         const GPS = 0x01;
@@ -3260,6 +3337,80 @@ struct RxmMeasx {
     reserved5: [u8;2],
 }*/
 
+#[ubx_packet_recv]
+#[ubx(class = 0x01, id = 0x26, fixed_payload_len = 24)]
+/// NAV Leap Second event information
+struct NavTimeLs {
+    itow: u32,
+    version: u8,
+    reserved1: [u8; 3],
+    #[ubx(map_type = NavTimeLsLeapSource)]
+    leap_source: u8,
+    curr_leap: i8,
+    #[ubx(map_type = NavTimeLsChangeSource)]
+    change_source: u8,
+    change: i8,
+    time_to_ls_event: i32,
+    date_ls_gps_wn: u16,
+    date_ls_gps_dn: u16,
+    reserved2: [u8; 3],
+    #[ubx(map_type = NavTimeLsValidFlags)]
+    valid: u8,
+}
+
+#[ubx_extend]
+#[ubx(from, rest_reserved)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum NavTimeLsChangeSource {
+    NoSource = 0,
+    GPS = 2,
+    SBAS = 3,
+    BeiDou = 4,
+    GAL = 5,
+    GLO = 6,
+    NavLc = 7,
+}
+
+impl Default for NavTimeLsChangeSource {
+    fn default() -> Self {
+        Self::NoSource
+    }
+}
+
+#[ubx_extend]
+#[ubx(from, rest_reserved)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub enum NavTimeLsLeapSource {
+    Hardcoded = 0,
+    GpsGloTimeDifference = 1,
+    GPS = 2,
+    SBAS = 3,
+    BeiDou = 4,
+    GAL = 5,
+    AidedData = 6,
+    Configured = 7,
+    NavLc = 8,
+    Unknown = 255,
+}
+
+impl Default for NavTimeLsLeapSource {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
+#[ubx_extend_bitflags]
+#[ubx(from, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    pub struct NavTimeLsValidFlags: u8 {
+        const VALID_CURRENT = 0x01;
+        const VALID_NEXT = 0x02;
+    }
+}
+
 define_recv_packets!(
     enum PacketRef {
         _ = UbxUnknownPacketRef,
@@ -3274,8 +3425,10 @@ define_recv_packets!(
         NavOdo,
         NavEoe,
         NavSvin,
+        NavTimeLs,
         //NavOrb,
         //CfgDgnss,
+        CfgGnss,
         CfgOdo,
         CfgTp5,
         MgaAck,
@@ -3293,7 +3446,6 @@ define_recv_packets!(
         CfgPrtUart,
         CfgNav5,
         CfgAnt,
-        //CfgGnss,
         CfgSmgr,
         CfgTmode2,
         CfgTmode3,
