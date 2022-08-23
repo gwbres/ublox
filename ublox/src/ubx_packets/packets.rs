@@ -1444,6 +1444,106 @@ bitflags! {
     }
 }
 
+/// CFG_CFG
+/// Clear, Save, Load configurations
+#[ubx_packet_send]
+#[ubx(
+    class = 0x06, 
+    id = 0x09, 
+    fixed_payload_len = 13, 
+    flags = "default_for_builder"
+)]
+struct CfgCfg {
+    #[ubx(map_type = CfgCfgMask)]
+    clear_mask: u32,
+    #[ubx(map_type = CfgCfgMask)]
+    save_mask: u32,
+    #[ubx(map_type = CfgCfgMask)]
+    load_mask: u32,
+    #[ubx(map_type = CfgCfgDevMask)]
+    dev_mask: u8,
+}
+
+#[ubx_extend_bitflags]
+#[ubx(into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    pub struct CfgCfgMask: u32 {
+        const IOPORT = 0x01;
+        const MSG_CONF = 0x02;
+        const INF_MSG = 0x04;
+        const NAV_CONF = 0x08;
+        const RXM_CONF = 0x10;
+        const SEN_CONF = 0x20;
+        const RINV_CONF = 0x40;
+        const ANT_CONF = 0x80;
+        const LOG_CONF = 0x100;
+        const FTS_CONF = 0x200;
+    }
+}
+
+/// CFG_PM2
+/// Power Management 2nd frame
+#[ubx_packet_send]
+#[ubx(
+    class = 0x06, 
+    id = 0x3B, 
+    fixed_payload_len = 48, 
+    flags = "default_for_builder"
+)]
+struct CfgPm2 {
+    /// 0x02 for this version
+    version: u8,
+    reserved1: u8,
+    /// maximal time in [s],
+    /// to spend in Acquisition state
+    max_startup_state_dur: u8,
+    reserved2: u8,
+    #[ubx(map_type = CfgPm2Flags)]
+    flags: u32,
+    /// update period [ms]
+    #[ubx(map_type = f32, scale = 1.0)]
+    update_period: u32,
+    /// search period [ms]
+    #[ubx(map_type = f32, scale = 1.0)]
+    search_period: u32,
+    /// grid offset [ms]
+    #[ubx(map_type = f32, scale = 1.0)]
+    grid_offset: u32,
+    /// time to stay in Tracking state [s]
+    #[ubx(map_type = f32, scale = 1.0)]
+    on_time: u16,
+    /// min search time [s]
+    #[ubx(map_type = f32, scale = 1.0)]
+    min_acq_time: u16,
+    reserved3: [u8; 20],
+    /// ext int inactivity [ms]
+    #[ubx(map_type = f32, scale = 1.0)]
+    ext_int_inactivity: u32,
+}
+
+#[ubx_extend_bitflags]
+#[ubx(into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    #[derive(Serialize, Deserialize)]
+    pub struct CfgPm2Flags: u32 {
+        const POWERSAVE = 0x01;
+    }
+}
+
+#[ubx_extend_bitflags]
+#[ubx(into_raw, rest_reserved)]
+bitflags! {
+    #[derive(Default)]
+    pub struct CfgCfgDevMask: u8 {
+        const BBRAM = 1;
+        const FLASH = 2;
+        const EEPROM = 4;
+        const SPI_FLASH = 8;
+    }
+}
+
 /// TP5: "Time Pulse" Config frame (32.10.38.4)
 #[ubx_packet_recv_send]
 #[ubx(
