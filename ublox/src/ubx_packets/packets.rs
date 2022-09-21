@@ -2573,6 +2573,7 @@ bitflags! {
 #[ubx(from, rest_reserved)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum AntennaStatus {
     Init = 0,
     DontKnow = 1,
@@ -2585,6 +2586,7 @@ pub enum AntennaStatus {
 #[ubx(from, rest_reserved)]
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Serialize, Deserialize)]
 pub enum AntennaPower {
     Off = 0,
     On = 1,
