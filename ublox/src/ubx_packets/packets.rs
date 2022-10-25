@@ -718,6 +718,25 @@ struct NavOdo {
     distance_std: u32,
 }
 
+#[ubx_packet_recv]
+#[ubx(class = 0x01, id = 0x22, fixed_payload_len = 20)]
+struct NavClock {
+    /// GPS time of week, in ms
+    itow: u32,
+    /// Clock bias [ns]
+    #[ubx(map_type = f64, scale = 1.0)]
+    clk_bias: i32,
+    /// Clock drift [ns/s]
+    #[ubx(map_type = f64, scale = 1.0)]
+    clk_drift: i32,
+    /// time accuracy
+    #[ubx(map_type = f64, scale = 1.0)]
+    time_acc: u32,
+    /// frequency accuracy
+    #[ubx(map_type = f64, scale = 1.0)]
+    freq_acc: u32,
+}
+
 /// Reset odometer
 #[ubx_packet_send]
 #[ubx(class = 0x01, id = 0x10, fixed_payload_len = 0)]
@@ -807,6 +826,21 @@ impl Default for CfgDgnssModes {
         CfgDgnssModes::RtkFloat
     }
 }*/
+
+
+/// High Navigation Rate config frame 
+#[ubx_packet_recv_send]
+#[ubx(
+    class = 0x06,
+    id = 0x5C,
+    fixed_payload_len = 4,
+    flags = "default_for_builder"
+)]
+struct CfgHnr {
+    /// NAV solutions rate [hz], default is 1
+    high_nav_rate: u8,
+    reserved: [u8; 3],
+}
 
 /// Configure odometer
 #[ubx_packet_recv_send]
@@ -1271,7 +1305,7 @@ mod cfggnss {
 )]
 struct CfgAnt {
     /// Antenna flag mask. See [AntFlags] for details.
-    #[ubx(map_type = AntFlags)]
+    #[ubx(map_type = CfgAntFlags)]
     flags: u16,
     /// Antenna pin configuration. See 32.10.1.1 in receiver spec for details.
     pins: u16,
@@ -1281,7 +1315,8 @@ struct CfgAnt {
 #[ubx(from, into_raw, rest_reserved)]
 bitflags! {
     #[derive(Default)]
-    pub struct AntFlags: u16 {
+    #[derive(Serialize, Deserialize)]
+    pub struct CfgAntFlags: u16 {
         /// Enable supply voltage control signal
         const SVCS = 0x01;
         /// Enable short circuit detection
@@ -1311,25 +1346,25 @@ struct CfgTmode2 {
     reserved1: u8,
     #[ubx(map_type = CfgTmode2Flags)] 
     flags: u16,
-    /// WGS84 ECEF.x coordinate in [m] or latitude in [deg° *1E-5],
+    /// WGS84 ECEF.x coordinate in [cm] or latitude in [deg° *1E-5],
     /// depending on `flags` field 
     #[ubx(map_type = f64, scale = 1e2)]
     ecef_x_or_lat: i32,
-    /// WGS84 ECEF.y coordinate in [m] or longitude in [deg° *1E-5],
+    /// WGS84 ECEF.y coordinate in [cm] or longitude in [deg° *1E-5],
     /// depending on `flags` field 
-    #[ubx(map_type = f64, scale = 1e2)]
+    #[ubx(map_type = f64, scale = 1.0)]
     ecef_y_or_lon: i32,
-    /// WGS84 ECEF.z coordinate or altitude, both in [m],
+    /// WGS84 ECEF.z coordinate or altitude, both in [cm],
     /// depending on `flags` field 
-    #[ubx(map_type = f64, scale = 1e2)]
+    #[ubx(map_type = f64, scale = 1.0)]
     ecef_z_or_alt: i32,
-    /// Fixed position 3D accuracy in [m]
-    #[ubx(map_type = f64, scale = 1e3)]
+    /// Fixed position 3D accuracy in [mm]
+    #[ubx(map_type = f64, scale = 1.0)]
     fixed_pos_acc: u32,
     /// Survey in minimum duration in [s]
     survey_in_min_duration: u32,
-    /// Survey in position accuracy limit in [m]
-    #[ubx(map_type = f64, scale = 1e3)]
+    /// Survey in position accuracy limit in [mm]
+    #[ubx(map_type = f64, scale = 1.0)]
     survey_in_accur_limit: u32,
 }
 
@@ -1411,12 +1446,12 @@ struct CfgTmode3 {
     ecef_z_or_alt_hp: i8,
     reserved2: u8,
     /// Fixed position 3D accuracy [0.1 mm]
-    #[ubx(map_type = f64, scale = 1e-4)]
+    #[ubx(map_type = f64, scale = 1.0)]
     fixed_pos_acc: u32,
     /// Survey in minimum duration [s]
     sv_in_min_duration: u32,
     /// Survey in position accuracy limit [0.1 mm]
-    #[ubx(map_type = f64, scale = 1e-4)]
+    #[ubx(map_type = f64, scale = 1.0)]
     sv_in_accur_limit: u32,
     reserved3: [u8; 8],
 }
@@ -2160,7 +2195,7 @@ struct CfgNav5 {
     tacc: u16,
 
     /// Static hold threshold
-    #[ubx(map_type = f32, scale = 0.01)]
+    #[ubx(map_type = f32, scale = 1.0)]
     static_hold_thresh: u8,
 
     /// DGNSS timeout (seconds)
@@ -2175,6 +2210,7 @@ struct CfgNav5 {
     reserved1: [u8; 2],
 
     /// Static hold distance threshold (beforequitting static hold)
+    #[ubx(map_type = f32, scale = 1.0)]
     static_hold_max_dist: u16,
 
     /// UTC standard to be used
@@ -2235,7 +2271,7 @@ pub enum CfgNav5DynModel {
 
 impl Default for CfgNav5DynModel {
     fn default() -> Self {
-        Self::AirborneWith4gAcceleration
+        Self::Stationary
     }
 }
 
@@ -2515,10 +2551,10 @@ struct MonHw {
     pin_val: u32,
     noise_per_ms: u16,
     agc_cnt: u16,
-    #[ubx(map_type = AntennaStatus)]
-    a_status: u8,
-    #[ubx(map_type = AntennaPower)]
-    a_power: u8,
+    #[ubx(map_type = MonHwAntennaStatus)]
+    ant_status: u8,
+    #[ubx(map_type = MonHwAntennaPower)]
+    ant_power: u8,
     flags: u8,
     reserved1: u8,
     used_mask: u32,
@@ -2529,6 +2565,7 @@ struct MonHw {
     pull_h: u32,
     pull_l: u32,
 }
+
 
 /// GNSS status,
 /// gives current selected constellations
@@ -2574,7 +2611,7 @@ bitflags! {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[derive(Serialize, Deserialize)]
-pub enum AntennaStatus {
+pub enum MonHwAntennaStatus {
     Init = 0,
     DontKnow = 1,
     Ok = 2,
@@ -2587,7 +2624,7 @@ pub enum AntennaStatus {
 #[repr(u8)]
 #[derive(Debug, Copy, Clone, PartialEq)]
 #[derive(Serialize, Deserialize)]
-pub enum AntennaPower {
+pub enum MonHwAntennaPower {
     Off = 0,
     On = 1,
     DontKnow = 2,
@@ -2811,18 +2848,251 @@ bitflags! {
     }
 }
 
-/*
-/// Jamming / Interference minotor configuration frame
+/// Configure Jamming interference monitoring 
 #[ubx_packet_recv_send]
-#[ubx(
-    class = 0x06,
-    id = 0x39,
-    fixed_payload_len = 8,
-    flags = "default_for_builder"
-)]
+#[ubx(class = 0x06, id = 0x39, fixed_payload_len = 8)]
 struct CfgItfm {
+    /// Interference config Word
+    #[ubx(map_type = CfgItfmConfig)]
+    config: u32,
+    /// Extra settings
+    #[ubx(map_type = CfgItfmConfig2)]
+    config2: u32,
+}
 
-}*/
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct CfgItfmConfig {
+    /// enable interference detection
+    pub enable: bool,
+    /// Broadband jamming detection threshold (dB)
+    pub bb_threshold: CfgItfmBbThreshold,
+    /// CW jamming detection threshold (dB)
+    pub cw_threshold: CfgItfmCwThreshold,
+    /// Reserved algorithm settings
+    /// should be set to 0x16B156 default value
+    /// for correct settings
+    pub algorithm_bits: CfgItfmAlgoBits,
+}
+
+impl Default for CfgItfmConfig {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            bb_threshold: CfgItfmBbThreshold::default(),
+            cw_threshold: CfgItfmCwThreshold::default(),
+            algorithm_bits: CfgItfmAlgoBits::default(),
+        }
+    }
+}
+
+impl CfgItfmConfig {
+    pub fn new(enable: bool, bb_threshold: u32, cw_threshold: u32) -> Self {
+        Self {
+            enable, 
+            bb_threshold: bb_threshold.into(),
+            cw_threshold: cw_threshold.into(),
+            algorithm_bits: CfgItfmAlgoBits::default(),
+        }
+    }
+
+    const fn into_raw(self) -> u32 {
+        (self.enable as u32)<<31
+            | self.cw_threshold.into_raw() 
+                | self.bb_threshold.into_raw()
+                    | self.algorithm_bits.into_raw()
+    }
+}
+
+impl From<u32> for CfgItfmConfig {
+    fn from(cfg: u32) -> Self {
+        let enable = (cfg & 0x80000000) > 0;
+        let bb_threshold = CfgItfmBbThreshold::from(cfg);
+        let cw_threshold = CfgItfmCwThreshold::from(cfg);
+        let algorithm_bits = CfgItfmAlgoBits::from(cfg);
+        Self {
+            enable,
+            bb_threshold,
+            cw_threshold,
+            algorithm_bits,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct CfgItfmBbThreshold(u32);
+
+impl CfgItfmBbThreshold {
+    const POSITION: u32 = 0;
+    const LENGTH: u32 = 4;
+    const MASK: u32 = (1<<Self::LENGTH)-1;
+    const fn into_raw(self) -> u32 {
+        (self.0 & Self::MASK) << Self::POSITION
+    }
+}
+
+impl Default for CfgItfmBbThreshold {
+    fn default() -> Self {
+        Self(3) // from UBX specifications
+    }
+}
+
+impl From<u32> for CfgItfmBbThreshold {
+    fn from(thres: u32) -> Self {
+        Self(thres)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct CfgItfmCwThreshold(u32);
+
+impl CfgItfmCwThreshold {
+    const POSITION: u32 = 4;
+    const LENGTH: u32 = 5;
+    const MASK: u32 = (1<<Self::LENGTH)-1;
+    const fn into_raw(self) -> u32 {
+        (self.0 & Self::MASK) << Self::POSITION
+    }
+}
+
+impl Default for CfgItfmCwThreshold {
+    fn default() -> Self {
+        Self(15) // from UBX specifications
+    }
+}
+
+impl From<u32> for CfgItfmCwThreshold {
+    fn from(thres: u32) -> Self {
+        Self(thres)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct CfgItfmAlgoBits(u32);
+
+impl CfgItfmAlgoBits {
+    const POSITION: u32 = 9;
+    const LENGTH: u32 = 22;
+    const MASK: u32 = (1<<Self::LENGTH)-1;
+    const fn into_raw(self) -> u32 {
+        (self.0 & Self::MASK) << Self::POSITION
+    }
+}
+
+impl Default for CfgItfmAlgoBits {
+    fn default() -> Self {
+        Self(0x16B156) // from UBX specifications
+    }
+}
+
+impl From<u32> for CfgItfmAlgoBits {
+    fn from(thres: u32) -> Self {
+        Self(thres)
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct CfgItfmConfig2 {
+    /// General settings, should be set to
+    /// 0x31E default value, for correct setting
+    pub general: CfgItfmGeneralBits,
+    /// antenna settings
+    pub antenna: CfgItfmAntennaSettings,
+    /// Set to true to scan auxillary bands on ublox-M8,
+    /// ignored otherwise
+    pub scan_aux_bands: bool,
+}
+
+impl CfgItfmConfig2 {
+    pub fn new(antenna: CfgItfmAntennaSettings, scan_aux_bands: bool) -> Self {
+        Self {
+            general: CfgItfmGeneralBits::default(),
+            antenna,
+            scan_aux_bands,
+        }
+    }
+
+    const fn into_raw(self) -> u32 {
+        ((self.scan_aux_bands as u32)<< 14) 
+            | self.general.into_raw() 
+                | self.antenna.into_raw() as u32
+    }
+}
+
+impl From<u32> for CfgItfmConfig2 {
+    fn from(cfg: u32) -> Self {
+        let scan_aux_bands = (cfg & 0x4000) > 0;
+        let general = CfgItfmGeneralBits::from(cfg);
+        let antenna = CfgItfmAntennaSettings::from(cfg);
+        Self {
+            scan_aux_bands,
+            general,
+            antenna,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct CfgItfmGeneralBits(u32);
+
+impl CfgItfmGeneralBits {
+    const POSITION: u32 = 0;
+    const LENGTH: u32 = 12;
+    const MASK: u32 = (1<<Self::LENGTH)-1;
+    const fn into_raw(self) -> u32 {
+        (self.0 & Self::MASK) << Self::POSITION
+    }
+}
+
+impl Default for CfgItfmGeneralBits {
+    fn default() -> Self {
+        Self(0x31E) // from UBX specifications
+    }
+}
+
+impl From<u32> for CfgItfmGeneralBits {
+    fn from(thres: u32) -> Self {
+        Self(thres)
+    }
+}
+
+/// ITFM Antenna settings helps the interference
+/// monitoring module
+#[ubx_extend]
+#[ubx(from_unchecked, into_raw, rest_error)]
+#[repr(u8)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum CfgItfmAntennaSettings {
+    /// Type of Antenna is not known
+    Unknown = 0,
+    /// Active antenna 
+    Active = 1,
+    /// Passive antenna
+    Passive = 2,
+}
+
+impl From<u32> for CfgItfmAntennaSettings {
+    fn from(cfg: u32) -> Self {
+        let cfg = (cfg & 0x3000) >> 12;
+        match cfg {
+            1 => CfgItfmAntennaSettings::Active,
+            2 => CfgItfmAntennaSettings::Passive,
+            _ => CfgItfmAntennaSettings::Unknown,
+        }
+    }
+}
+
+impl Default for CfgItfmAntennaSettings {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
 
 #[ubx_packet_recv]
 #[ubx(
@@ -3537,6 +3807,7 @@ define_recv_packets!(
         NavTimeUTC,
         NavSat,
         NavOdo,
+        NavClock,
         NavEoe,
         NavSvin,
         NavTimeLs,
@@ -3560,6 +3831,8 @@ define_recv_packets!(
         CfgPrtUart,
         CfgNav5,
         CfgAnt,
+        CfgHnr,
+        CfgItfm,
         CfgSmgr,
         CfgTmode2,
         CfgTmode3,
