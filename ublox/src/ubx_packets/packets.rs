@@ -584,7 +584,8 @@ impl fmt::Debug for NavSatSvFlags {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize)]
 pub enum NavSatQualityIndicator {
     NoSignal,
     Searching,
@@ -595,6 +596,7 @@ pub enum NavSatQualityIndicator {
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Serialize, Deserialize)]
 pub enum NavSatSvHealth {
     Healthy,
     Unhealthy,
